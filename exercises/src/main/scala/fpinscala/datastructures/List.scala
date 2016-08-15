@@ -158,4 +158,16 @@ object List { // `List` companion object. Contains functions for creating and wo
       case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1, h2), zipWith(t1, t2)(f))
       case _ => Nil
     }
+
+  def hasSubsequenceWrong[A](sup: List[A], sub: List[A]): Boolean = {
+    val matches: Boolean = sub match {
+      case Nil => true
+      case Cons(h, t) if length3(sup) > 0 && h == head(sup) => hasSubsequenceWrong(tail(sup), t)
+      case _ => false
+    }
+
+    if (matches) true
+    else if (length3(sup) == 0) false
+    else hasSubsequenceWrong(tail(sup), sub)
+  }
 }
