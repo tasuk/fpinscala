@@ -67,6 +67,38 @@ trait Stream[+A] {
     foldRight(empty[B])((h, t) => f(h).append(t))
 
   def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+
+
+  def mapUn[B](f: A => B): Stream[B] =
+    unfold(this){
+      case Cons(h, t) => Some((f(h()), t()))
+      case Empty => None
+    }
+
+  def takeUn(n: Int): Stream[A] =
+    unfold((this, n)){
+      case (Cons(h, t), i) if i > 0 => Some((h(), (t(), i - 1)))
+      case _ => None
+    }
+
+  def takeWhileUn(f: A => Boolean): Stream[A] =
+    unfold(this){
+      case Cons(h, t) if f(h()) => Some((h(), t()))
+      case _ => None
+    }
+
+  def zipWithUn[B,C](that: Stream[B])(f: (A, B) => C): Stream[C] =
+    unfold((this, that)){
+      case (Cons(h1, t1), Cons(h2, t2)) => Some((
+        f(h1(), h2()),
+         (t1(), t2())
+      ))
+      case _ => None
+    }
+
+  // def zipAll[B](that: Stream[B]): Stream[(Option[A],Option[B])] =
+  //   unfold((this, that)){
+  //   }
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
@@ -84,8 +116,26 @@ object Stream {
     if (as.isEmpty) empty 
     else cons(as.head, apply(as.tail: _*))
 
-  val ones: Stream[Int] = Stream.cons(1, ones)
-  def from(n: Int): Stream[Int] = sys.error("todo")
+  val ones: Stream[Int] = cons(1, ones)
+  def constant[A](a: A): Stream[A] = cons(a, constant(a))
+  def from(n: Int): Stream[Int] = cons(n, from(n + 1))
 
-  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = sys.error("todo")
+  def fibs: Stream[Int] = {
+    def doFib(prev: Int, cur: Int): Stream[Int] =
+      cons(cur, doFib(cur, prev + cur))
+    doFib(0, 1)
+  }
+
+  def unfold[A, S](state: S)(f: S => Option[(A, S)]): Stream[A] =
+    f(state) match {
+      case Some((a, s)) => cons(a, unfold(s)(f))
+      case None => empty
+    }
+
+  def onesUn: Stream[Int] = unfold(1)(s => Some(1, 1))
+  def constantUn[A](a: A): Stream[A] = unfold(a)(s => Some(a, a))
+  def fromUn(n: Int): Stream[Int] = unfold(n)(s => Some(s, s + 1))
+  def fibUn: Stream[Int] = unfold((0, 1)){
+    case (cur, next) => Some(cur, (next, cur + next))
+  }
 }
