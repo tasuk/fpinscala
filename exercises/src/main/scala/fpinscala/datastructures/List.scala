@@ -37,10 +37,10 @@ object List { // `List` companion object. Contains functions for creating and wo
       case Cons(h,t) => Cons(h, append(t, a2))
     }
 
-  def foldRight[A,B](list: List[A], acc: B)(f: (A, B) => B): B = // Utility functions
-    list match {
+  def foldRight[A,B](l: List[A], acc: B)(f: (A, B) => B): B = // Utility functions
+    l match {
       case Nil => acc
-      case Cons(head, tail) => f(head, foldRight(tail, acc)(f))
+      case Cons(h, t) => f(h, foldRight(t, acc)(f))
     }
 
   def sum2(ns: List[Int]) =
@@ -73,7 +73,7 @@ object List { // `List` companion object. Contains functions for creating and wo
   def foldLeft[A,B](l: List[A], acc: B)(f: (B, A) => B): B =
     l match {
       case Nil => acc
-      case Cons(x, xs) => foldLeft(xs, f(acc, x))(f)
+      case Cons(h, t) => foldLeft(t, f(acc, h))(f)
     }
 
   def sum3(l: List[Int]) =
