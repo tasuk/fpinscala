@@ -66,8 +66,16 @@ trait Stream[+A] {
   def flatMap[B](f: A => Stream[B]): Stream[B] =
     foldRight(empty[B])((h, t) => f(h).append(t))
 
-  def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+  def startsWith[B](s: Stream[B]): Boolean =
+    zipAll(s).takeWhile(! _._2.isEmpty).forAll {
+      case (a, b) => a == b
+    }
 
+  def tails: Stream[Stream[A]] =
+    unfold(this){
+      case Empty => None
+      case stream => Some((stream, stream.drop(1)))
+    } append Stream(empty)
 
   def mapUn[B](f: A => B): Stream[B] =
     unfold(this){
@@ -96,9 +104,13 @@ trait Stream[+A] {
       case _ => None
     }
 
-  // def zipAll[B](that: Stream[B]): Stream[(Option[A],Option[B])] =
-  //   unfold((this, that)){
-  //   }
+  def zipAll[B](that: Stream[B]): Stream[(Option[A],Option[B])] =
+    unfold((this, that)){
+      case (Empty, Empty) => None
+      case (Empty, Cons(h2, t2)) => Some(((None, Some(h2())), (empty, t2())))
+      case (Cons(h1, t1), Empty) => Some(((Some(h1()), None), (t1(), empty)))
+      case (Cons(h1, t1), Cons(h2, t2)) => Some(((Some(h1()), Some(h2())), (t1(), t2())))
+    }
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
