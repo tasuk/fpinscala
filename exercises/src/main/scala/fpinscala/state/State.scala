@@ -31,7 +31,7 @@ object RNG {
     }
 
   def mapWithFlatMap[A,B](s: Rand[A])(f: A => B): Rand[B] =
-    flatMap(s)(f)
+    flatMap(s) { i => unit(f(i)) }
 
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
     val (int, rng2) = rng.nextInt
@@ -83,6 +83,9 @@ object RNG {
       (f(a, b), rng3)
     }
 
+  def map2WithFlatMap[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(aa => map(rb)(bb => f(aa, bb)))
+
   // List[RNG => (A, RNG)]: RNG => (List[A], RNG)
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
     fs.foldRight(unit(List[A]()))((el, acc) => map2(el, acc)(_ :: _))
@@ -100,13 +103,39 @@ object RNG {
     }
 }
 
+import State._
+
 case class State[S,+A](run: S => (A, S)) {
   def map[B](f: A => B): State[S, B] =
-    sys.error("todo")
+    flatMap(a => State.unit(f(a)))
   def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] =
-    sys.error("todo")
+    flatMap(a => sb.map(b => f(a, b)))
   def flatMap[B](f: A => State[S, B]): State[S, B] =
-    sys.error("todo")
+    State(s => {
+      val (a, s2) = run(s)
+      f(a).run(s2)
+    })
+}
+
+object State {
+  def unit[S, A](a: A): State[S, A] =
+    State(s => (a, s))
+
+  def sequence[S, A](fs: List[State[S, A]]): State[S, List[A]] =
+    fs.foldRight(unit[S, List[A]](List()))((el, acc) => el.map2(acc)(_ :: _))
+
+  def modify[S](f: S => S): State[S, Unit] = for {
+    s <- get // Gets the current state and assigns it to `s`.
+    _ <- set(f(s)) // Sets the new state to `f` applied to `s`.
+  } yield ()
+
+  def get[S]: State[S, S] =
+    State(s => (s, s))
+
+  def set[S](s: S): State[S, Unit] =
+    State(_ => ((), s))
+
+  // type Rand[A] = State[RNG, A]
 }
 
 sealed trait Input
@@ -115,7 +144,27 @@ case object Turn extends Input
 
 case class Machine(locked: Boolean, candies: Int, coins: Int)
 
-object State {
-  type Rand[A] = State[RNG, A]
-  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
+object Candy {
+  def update = (i: Input) => (s: Machine) =>
+    (i, s) match {
+      case (_, Machine(_, 0, _)) => s
+      case (Coin, Machine(true, candy, coin)) => Machine(false, candy, coin+1)
+      case (Turn, Machine(false, candy, coin)) => Machine(true, candy-1, coin)
+      case _ => s
+    }
+
+  def simulateMachine(input: Input): State[Machine, (Int, Int)] =
+    for {
+      _ <- (modify[Machine](_)).compose(update)(input)
+      s <- get
+    } yield (s.coins, s.candies)
+
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] =
+    for {
+      _ <- sequence(inputs.map((modify[Machine](_)).compose(update)))
+      s <- get
+    } yield (s.coins, s.candies)
+
+  //def asdf =
+  //  simulateMachine(List(Coin, Turn, Coin, Turn)).run(Machine(false, 3, 3))
 }
