@@ -4,7 +4,7 @@ package applicative
 import monads.Functor
 import state._
 import State._
-import StateUtil._ // defined at bottom of this file
+// import StateUtil._ // defined at bottom of this file
 import monoids._
 import language.higherKinds
 import language.implicitConversions
@@ -144,11 +144,11 @@ object Traverse {
 // The `get` and `set` functions on `State` are used above,
 // but aren't in the `exercises` subproject, so we include
 // them here
-object StateUtil {
-
-  def get[S]: State[S, S] =
-    State(s => (s, s))
-
-  def set[S](s: S): State[S, Unit] =
-    State(_ => ((), s))
-}
+// object StateUtil {
+// 
+//   def get[S]: State[S, S] =
+//     State(s => (s, s))
+// 
+//   def set[S](s: S): State[S, Unit] =
+//     State(_ => ((), s))
+// }
