@@ -48,7 +48,13 @@ object Par {
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
   def asyncF[A,B](f: A => B): A => Par[B] =
-    a => lazyunit(f(a))
+    a => lazyUnit(f(a))
+
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+    ps.foldRight[Par[List[A]]](unit(List()))((acc, i) => map2(acc, i)(_ :: _))
+
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] =
+    ???
 
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
